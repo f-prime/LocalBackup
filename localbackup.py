@@ -37,9 +37,9 @@ class LocalBackup:
             for files in files: 
                 try:
                     check = open(dirs+"/"+files, 'rb').read()
-                    if os.path.exists(self.hardDiskDirectory+new_dirs+"/"+files):
+                    if os.path.exists(self.hardDiskDirectory+new_dirs+files):
                 
-                        if hash(check) != hash(open(self.hardDiskDirectory+new_dirs+"/"+files, 'rb').read()): # If the file has changed
+                        if hash(check) != hash(open(self.hardDiskDirectory+new_dirs+files, 'rb').read()): # If the file has changed
                             print self.hardDiskDirectory+new_dirs+files
                             shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
 
