@@ -60,6 +60,7 @@ class LocalBackup:
 
                 except Exception, e:
                     print e
+                    break # Just skip the directory
 
 
     def longCopy(self, files):
