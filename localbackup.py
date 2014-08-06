@@ -2,6 +2,7 @@ import landerdb
 import os
 import time
 import shutil
+import thread
 
 class LocalBackup:
     def __init__(self):
@@ -36,20 +37,33 @@ class LocalBackup:
             new_dirs = dirs.replace(self.start_dir, "/")
             for files in files: 
                 try:
+                    size = os.path.getsize(dirs+"/"+files)
+                    if size == 0: # Occationally it would get stuck
+                        continue
                     check = open(dirs+"/"+files, 'rb').read()
                     if os.path.exists(self.hardDiskDirectory+new_dirs+files):
                 
                         if hash(check) != hash(open(self.hardDiskDirectory+new_dirs+files, 'rb').read()): # If the file has changed
                             print self.hardDiskDirectory+new_dirs+files
-                            shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
-
+                            
+                            if size > 0  and size < 1024 * 1024 * 1024 * 500: # 500mb
+                                shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
+                            elif size > 0:
+                                thread.start_new_thread(self.longCopy, dirs+"/"+files)
                     else:
                         print self.hardDiskDirectory+new_dirs+files
-                        shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
+                
+                        if size > 0  and size < 1024 * 1024 * 1024 * 500: # 500mb 
+                            shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
+                        elif size > 0:
+                            thread.start_new_thread(self.longCopy, dirs+"/"+files)
 
                 except Exception, e:
                     print e
 
+
+    def longCopy(self, files):
+        shutil.copy(files, self.hardDiskDirectory+new_dirs+files)
 
 
 if __name__ == "__main__":
