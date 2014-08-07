@@ -40,11 +40,12 @@ class LocalBackup:
                     size = os.path.getsize(dirs+"/"+files)
                     if size == 0: # Occationally it would get stuck
                         continue
-                    check = open(dirs+"/"+files, 'rb').read()
+                    check = os.stat(dirs+"/"+files).st_mtime
                     if os.path.exists(self.hardDiskDirectory+new_dirs+files):
-                
-                        if hash(check) != hash(open(self.hardDiskDirectory+new_dirs+files, 'rb').read()): # If the file has changed
-                            print self.hardDiskDirectory+new_dirs+files
+                        c2 = os.stat(self.hardDiskDirectory+new_dirs+files).st_mtime
+                        
+                        if check != c2: # If the file has changed
+                            print self.hardDiskDirectory+new_dirs+files, "Changed"
                             
                             if size > 0  and size < 1024 * 1024 * 1024 * 500: # 500mb
                                 shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
