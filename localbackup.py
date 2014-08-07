@@ -36,28 +36,31 @@ class LocalBackup:
         for dirs, _, files in os.walk(self.start_dir):
             new_dirs = dirs.replace(self.start_dir, "/")
             for files in files: 
+                old = os.path.join(dirs, files)
+                new = os.path.join(self.hardDiskDirectory+new_dirs, files)
+                self.new = new
                 try:
-                    size = os.path.getsize(dirs+"/"+files)
+                    size = os.path.getsize(old)
                     if size == 0: # Occationally it would get stuck
                         continue
-                    check = os.stat(dirs+"/"+files).st_mtime
-                    if os.path.exists(self.hardDiskDirectory+new_dirs+files):
-                        c2 = os.stat(self.hardDiskDirectory+new_dirs+files).st_mtime
-                        
-                        if check != c2: # If the file has changed
-                            print self.hardDiskDirectory+new_dirs+files, "Changed"
-                            
-                            if size > 0  and size < 1024 * 1024 * 1024 * 500: # 500mb
-                                shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
-                            elif size > 0:
-                                thread.start_new_thread(self.longCopy, dirs+"/"+files)
-                    else:
-                        print self.hardDiskDirectory+new_dirs+files
+                    check = os.stat(old).st_size
                 
-                        if size > 0  and size < 1024 * 1024 * 1024 * 500: # 500mb 
-                            shutil.copy(dirs+"/"+files, self.hardDiskDirectory+new_dirs+files)
+                    if os.path.exists(new):
+                        c2 = os.stat(new).st_size
+                        if check != c2: # If the file has changed
+                            print new, "Changed"
+                            
+                            if size > 0  and size < 1024 * 1024 * 500: # 500mb
+                                shutil.copy(old, new)
+                            elif size > 0:
+                                thread.start_new_thread(self.longCopy, (old,))
+                    else:
+                        print new
+                
+                        if size > 0  and size < 1024 * 1024 * 500: # 500mb 
+                            shutil.copy(old, new)
                         elif size > 0:
-                            thread.start_new_thread(self.longCopy, dirs+"/"+files)
+                            thread.start_new_thread(self.longCopy, (old,))
 
                 except Exception, e:
                     print e
@@ -65,7 +68,14 @@ class LocalBackup:
 
 
     def longCopy(self, files):
-        shutil.copy(files, self.hardDiskDirectory+new_dirs+files)
+        with open(self.new, 'wb') as file:
+            with open(files, 'rb') as old:
+                while True:
+                    data = old.read(1024)
+                    if not data:
+                        break
+                    else:
+                        file.write(data)
 
 
 if __name__ == "__main__":
