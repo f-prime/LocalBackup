@@ -1,93 +1,73 @@
-import landerdb
 import os
-import time
 import shutil
+import datetime
+import time
 import thread
 
 class LocalBackup:
     def __init__(self):
-        self.db = landerdb.Connect("localbackup.db")
-        self.start_dir = str(self.db.find("startdirectory", "all")[0]['startdirectory'])
-        self.hardDiskDirectory = str(self.db.find("harddisk", "all")[0]["harddisk"])
-        self.lastBackup = self.db.find("lastbackup", "all")[0]['lastbackup']
+        self.prevDate = None
+        self.nowDate  = "{0}-{1}-{2}"
+        self.backupDir = "/media/frankie/UNTITLED"
+        self.startDir = "/home/frankie"
+        self.on = False
+        self.threads = 0
+        self.maxThreads = 25
 
     def main(self):
+        thread.start_new_thread(self.interaction, ())
         while True:
-            if time.time() - self.lastBackup >= 60 * 60 * 24:
-                self.createDirs()
-                self.writeFiles()
-                self.db.update("lastbackup", {"lastbackup":self.lastBackup}, {"lastbackup":time.time()})
-                self.db.save()
-                print "Backed up"
-            time.sleep(60*60)
+            now = datetime.datetime.now()
+            self.nowDate = self.nowDate.format(now.year, now.month, now.day)
+            if self.nowDate != self.prevDate:
+                self.prevDate = self.nowDate
+                if not os.path.exists(self.backupDir + "/" + self.nowDate):
+                    os.mkdir(self.backupDir + "/" + self.nowDate)
+                self.backup()
+                print "Done" 
 
-    def createDirs(self):
-        
-        for dirs, _, _ in os.walk(self.start_dir):
-            dirs = dirs.replace(self.start_dir, '/')
-            if not os.path.exists(self.hardDiskDirectory+dirs):
-                print self.hardDiskDirectory+dirs
+            time.sleep(60 * 60)
+
+
+
+    def backup(self):
+        for dire, _, files in os.walk(self.startDir):
+            dire = dire.replace(self.startDir, '')
+            self.on = self.backupDir + "/" + self.nowDate + "/" + dire
+            if not os.path.exists(self.backupDir + "/" + self.nowDate + "/" + dire):
                 try:
-                    os.mkdir(self.hardDiskDirectory+dirs)
-                except OSError:
-                    pass
-
-    def writeFiles(self):
-        for dirs, _, files in os.walk(self.start_dir):
-            new_dirs = dirs.replace(self.start_dir, "/")
-            for files in files: 
-                old = os.path.join(dirs, files)
-                new = os.path.join(self.hardDiskDirectory+new_dirs, files)
-                self.new = new
-                try:
-                    size = os.path.getsize(old)
-                    if size == 0: # Occationally it would get stuck
-                        continue
-                    check = os.stat(old).st_size
-                
-                    if os.path.exists(new):
-                        c2 = os.stat(new).st_size
-                        if check != c2: # If the file has changed
-                            print new, "Changed"
-                            
-                            if size > 0  and size < 1024 * 1024 * 500: # 500mb
-                                shutil.copy(old, new)
-                            elif size > 0:
-                                thread.start_new_thread(self.longCopy, (old,))
-                    else:
-                        print new
-                
-                        if size > 0  and size < 1024 * 1024 * 500: # 500mb 
-                            shutil.copy(old, new)
-                        elif size > 0:
-                            thread.start_new_thread(self.longCopy, (old,))
-
+                    os.mkdir(self.backupDir + "/" + self.nowDate + "/" + dire)
+                    print self.backupDir + "/" + self.nowDate + "/" + dire
                 except Exception, e:
+                    print dire + " Can't be made"
                     print e
-                    break # Just skip the directory
+            
+            for files in files:
+                while self.threads == self.maxThreads:
+                    pass
+                self.threads += 1
+                thread.start_new_thread(self.copy, (dire, files))
 
+         
+    
+    def copy(self, directory, file):
+        origin = "/home/frankie/{0}/{1}".format(directory, file)
+        destination = "{0}/{1}/{2}/{3}".format(self.backupDir, self.nowDate, directory, file)
+        self.on = destination
+        try:
+            shutil.copy2(origin, destination)
+            print destination
 
-    def longCopy(self, files):
-        with open(self.new, 'wb') as file:
-            with open(files, 'rb') as old:
-                while True:
-                    data = old.read(1024)
-                    if not data:
-                        break
-                    else:
-                        file.write(data)
+        except Exception, e:
+            print "Can't Copy {0}".format(origin)
+            print e
 
+        self.threads -= 1
+
+    def interaction(self):
+        while True:
+            raw_input()
+            print self.on
 
 if __name__ == "__main__":
-    if not os.path.exists("localbackup.db"):
-        db = landerdb.Connect("localbackup.db")
-        start_directory = raw_input("Enter your home directory: ")
-        hardDiskDirectory = raw_input("Enter hardisk directory: ")
-        db.insert("harddisk", {"harddisk":hardDiskDirectory})
-        db.save()
-        db.insert("startdirectory", {"startdirectory":start_directory})
-        db.save()
-        db.insert("lastbackup", {"lastbackup":0})
-        db.save()
-
     LocalBackup().main()
