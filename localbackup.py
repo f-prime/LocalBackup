@@ -8,8 +8,8 @@ class LocalBackup:
     def __init__(self):
         self.prevDate = None
         self.nowDate  = "{0}-{1}-{2}"
-        self.backupDir = "/media/frankie/UNTITLED"
-        self.startDir = "/home/frankie"
+        self.backupDir = raw_input("Backup Directory: ")
+        self.startDir = raw_input("Start Directory: ")
         self.on = False
         self.threads = 0
         self.maxThreads = 25
@@ -53,6 +53,18 @@ class LocalBackup:
     def copy(self, directory, file):
         origin = "/home/frankie/{0}/{1}".format(directory, file)
         destination = "{0}/{1}/{2}/{3}".format(self.backupDir, self.nowDate, directory, file)
+        if os.path.exists(destination):
+            obj1 = open(origin)
+            c1 = obj1.read()
+            obj1.close()
+            obj2 = open(destination)
+            c2 = obj2.read()
+            obj2.close()
+
+            if hash(c1) == hash(c2):
+                print "{0} Hasn't changed".format(destination)
+                self.threads -= 1
+                return
         self.on = destination
         try:
             shutil.copy2(origin, destination)
